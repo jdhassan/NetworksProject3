@@ -14,13 +14,10 @@ sentPackets = []
 def logPacket(packet):
   sentPackets.append(packet)
 
-def duplicate(packet):
+def duplicate(data, sqn):
   for p in sentPackets:
-    #log(p)
-    #log(packet)
-    #if hashlib.md5(packet) == hashlib.md5(p):
-    if packet['data'] == p['data'] and packet['sequence'] == p['sequence']:
-      return True
+    if data == p['data'] and sqn == p['sequence']:
+     return True
   return False
 
 def log(string):
@@ -44,7 +41,7 @@ def main():
   # Now listen for packets
   while True:
     result = sock.recvfrom(MSG_SIZE)
-
+    #log(f"recv {result}")
     # If nothing is ready, we hit the timeout
     if result:
       (data, addr) = result
@@ -52,7 +49,7 @@ def main():
 
       try:
         decoded = json.loads(data)
-
+        
         # If the EOF flag is set, exit
         if decoded['eof']:
           
@@ -63,10 +60,10 @@ def main():
         if decoded['data']:
           # If we receive data, we assume it's in-order
           # You will need to do much more here
-          #if not duplicate(result):
-          log(f"[recv data] {decoded['sequence']} ({len(decoded['data'])}) ACCEPTED (in-order)")
-          logPacket(result)
-          sys.stdout.write(decoded['data'])
+          if decoded['data'] and (duplicate(decoded['data'], decoded['sequence']) == False):
+            log(f"[recv data] {decoded['sequence']} ({len(decoded['data'])}) ACCEPTED (in-order)")
+            logPacket(decoded)
+            sys.stdout.write(decoded['data'])
 
         # Send back an ack to the sender
         msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data'])})
